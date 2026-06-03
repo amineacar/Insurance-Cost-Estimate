@@ -10,6 +10,12 @@ st.set_page_config(
     layout="centered"
 )
 
+# ── Session State Initialization (Tahmin Geçmişi Hafızası) ────────────────────
+if "prediction_history" not in st.session_state:
+    st.session_state.prediction_history = pd.DataFrame(columns=[
+        "Age", "Height (cm)", "Weight (kg)", "BMI", "Gender", "Children", "Smoker", "Region", "Estimated Cost ($)"
+    ])
+
 # ── Custom CSS ─────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
@@ -320,6 +326,25 @@ if st.button("Predict my cost →"):
             </div>
             """, unsafe_allow_html=True)
 
+            # Yeni tahmin verilerini bir sözlük olarak hazırlıyoruz
+            new_record = {
+                "Age": age,
+                "Height (cm)": height,
+                "Weight (kg)": weight,
+                "BMI": round(bmi, 2),
+                "Gender": sex,
+                "Children": children,
+                "Smoker": smoker,
+                "Region": region,
+                "Estimated Cost ($)": round(float(result), 2)
+            }
+            
+            # Yeni kaydı mevcut geçmiş tablosuna ekliyoruz
+            st.session_state.prediction_history = pd.concat([
+                st.session_state.prediction_history, 
+                pd.DataFrame([new_record])
+            ], ignore_index=True)
+
             # ── Progress bar: where does this person's cost sit? ──────────────
             st.markdown("**Where does your estimate sit in the dataset?**")
             st.progress(progress_val,
@@ -371,3 +396,31 @@ if st.button("Predict my cost →"):
                     st.info(tip)
 
             st.markdown('</div>', unsafe_allow_html=True)
+
+
+# ── Prediction History UI Section ─────────────────────────────────────────────
+# Eğer hafızada en az 1 tane bile tahmin geçmişi varsa bu alanı gösteriyoruz
+if not st.session_state.prediction_history.empty:
+    st.markdown("---")
+    
+    # Dile göre başlık ve buton yazıları
+    hist_title = "📋 Prediction History" if lang == "English" else "📋 Tahmin Geçmişi Records"
+    hist_sub = "Below are the calculations made during this session:" if lang == "English" else "Bu oturumda yapılan hesaplamalar:"
+    download_btn_lbl = "📥 Download History as CSV" if lang == "English" else "📥 Geçmişi CSV Olarak İndir"
+    
+    st.markdown(f"### {hist_title}")
+    st.caption(hist_sub)
+    
+    # Geçmiş tablosunu şık bir Streamlit veri tablosu olarak gösteriyoruz
+    st.dataframe(st.session_state.prediction_history, use_container_width=True)
+    
+    # Tabloyu CSV formatına dönüştürme fonksiyonu
+    csv_data = st.session_state.prediction_history.to_csv(index=False).encode('utf-8')
+    
+    # Kullanıcının bilgisayarına indirmesini sağlayan buton
+    st.download_button(
+        label=download_btn_lbl,
+        data=csv_data,
+        file_name="insurance_predictions_history.csv",
+        mime="text/csv"
+    )
