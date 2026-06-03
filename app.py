@@ -151,60 +151,130 @@ except FileNotFoundError:
     st.error("⚠️ Model or Scaler files could not be found!")
     model_loaded = False
 
+
+# ── Language Selection ────────────────────────────────────────────────────────
+lang = st.sidebar.selectbox("🌐 Language / Dil", options=["English", "Türkçe"])
+
+# Dil sözlükleri (Dictionary)
+texts = {
+    "English": {
+        "sidebar_title": "### 📊 Model Info",
+        "page_title": "🏥 Insurance Cost Estimator",
+        "page_sub": "Fill in the details below to get a personalized annual cost estimate.",
+        "personal_info": "👤 Personal Information",
+        "age": "Age",
+        "gender": "Gender",
+        "height": "Height (cm)",
+        "weight": "Weight (kg)",
+        "region": "Region",
+        "lifestyle": "🌿 Lifestyle",
+        "children": "Number of Children",
+        "smoke": "Do You Smoke?",
+        "predict_btn": "Predict my cost →",
+        "err_validation": "⚠️ Age must be 18+ and BMI must be greater than 10.",
+        "err_model": "Model files are missing — cannot predict.",
+        "calc_spinner": "Calculating...",
+        "res_annual": "Estimated Annual Cost",
+        "res_month": "month",
+        "sit_dataset": "**Where does your estimate sit in the dataset?**",
+        "drivers_title": "💡 Key Cost Drivers"
+    },
+    "Türkçe": {
+        "sidebar_title": "### 📊 Model Bilgisi",
+        "page_title": "🏥 Sigorta Maliyeti Tahmin Sistemi",
+        "page_sub": "Kişiselleştirilmiş yıllık maliyet tahminini almak için aşağıdaki detayları doldurun.",
+        "personal_info": "👤 Kişisel Bilgiler",
+        "age": "Yaş",
+        "gender": "Cinsiyet",
+        "height": "Boy (cm)",
+        "weight": "Kilo (kg)",
+        "region": "Bölge",
+        "lifestyle": "🌿 Yaşam Tarzı",
+        "children": "Çocuk Sayısı",
+        "smoke": "Sigara Kullanıyor musunuz?",
+        "predict_btn": "Maliyeti Tahmin Et →",
+        "err_validation": "⚠️ Yaş 18+ ve BMI 10'dan büyük olmalıdır.",
+        "err_model": "Model dosyaları eksik — tahmin yapılamıyor.",
+        "calc_spinner": "Hesaplanıyor...",
+        "res_annual": "Tahmini Yıllık Maliyet",
+        "res_month": "ay",
+        "sit_dataset": "**Tahmininiz veri setinde nerede yer alıyor?**",
+        "drivers_title": "💡 Temel Maliyet Sürücüleri"
+    }
+}
+
+# Seçilen dile göre aktif metin setini atıyoruz
+t = texts[lang]
+
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("### 📊 Model Info")
+    st.markdown(t["sidebar_title"])
     st.markdown("---")
-    st.metric("Algorithm", "Gradient Boosting")
+    
+    # Dile göre metrik etiketleri
+    alg_lbl = "Algorithm" if lang == "English" else "Algoritma"
+    feat_lbl = "Features" if lang == "English" else "Öznitelikler"
+    imp_lbl = "Feature importance" if lang == "English" else "Öznitelik Önem Derecesi"
+    
+    st.metric(alg_lbl, "Gradient Boosting")
     st.metric("R² Score", "0.89")
-    st.metric("Features", "8")
+    st.metric(feat_lbl, "8")
     st.markdown("---")
-    st.markdown("**Feature importance**")
-    st.progress(0.95, text="🚬 Smoking")
-    st.progress(0.60, text="🎂 Age")
-    st.progress(0.40, text="⚖️ BMI")
-    st.progress(0.20, text="👶 Children")
-    st.progress(0.10, text="📍 Region")
+    st.markdown(f"**{imp_lbl}**")
+    
+    # İlerleme çubuklarının üzerindeki yazılar
+    smk_side = "🚬 Smoking" if lang == "English" else "🚬 Sigara Kullanımı"
+    age_side = "🎂 Age" if lang == "English" else "🎂 Yaş"
+    bmi_side = "⚖️ BMI" if lang == "English" else "⚖️ BMI (Vücut Kitle)"
+    chld_side = "👶 Children" if lang == "English" else "👶 Çocuk Sayısı"
+    reg_side = "📍 Region" if lang == "English" else "📍 Bölge"
+    
+    st.progress(0.95, text=smk_side)
+    st.progress(0.60, text=age_side)
+    st.progress(0.40, text=bmi_side)
+    st.progress(0.20, text=chld_side)
+    st.progress(0.10, text=reg_side)
     st.markdown("---")
-    st.caption("Insurance Cost Estimator · Week 4")
-
+    
+    caption_txt = "Insurance Cost Estimator · Week 4" if lang == "English" else "Sigorta Maliyet Tahmini · 4. Hafta"
+    st.caption(caption_txt)
 # ── Page Header ───────────────────────────────────────────────────────────────
-st.markdown("""
+st.markdown(f"""
 <div class="page-header">
-  <div class="page-title">🏥 Insurance Cost Estimator</div>
-  <div class="page-sub">Fill in the details below to get a personalized annual cost estimate.</div>
+  <div class="page-title">{t["page_title"]}</div>
+  <div class="page-sub">{t["page_sub"]}</div>
 </div>
 """, unsafe_allow_html=True)
-
 # ── Form – Personal Info ──────────────────────────────────────────────────────
-st.markdown('<div class="section-card"><div class="section-title">👤 Personal Information</div>', unsafe_allow_html=True)
+# ── Form – Personal Info ──────────────────────────────────────────────────────
+st.markdown(f'<div class="section-card"><div class="section-title">{t["personal_info"]}</div>', unsafe_allow_html=True)
 col1, col2 = st.columns(2)
 with col1:
-    # Geliştirme 1: Yaş için alt ve üst güvenlik sınırları (18-100) eklendi
-    age = st.number_input("Age", min_value=18, max_value=100, value=25, step=1)
-    sex = st.selectbox("Gender", options=["Male", "Female"])
+    # İlki etiket (label) kısmıdır. Oraya t["age"] ve t["gender"] verdik
+    age = st.number_input(t["age"], min_value=18, max_value=100, value=25, step=1)
+    sex = st.selectbox(t["gender"], options=["Male", "Female"])
 with col2:
-    # Geliştirme 2: Kullanıcıların BMI değerini otomatik hesaplayan Boy & Kilo entegrasyonu
-    height = st.number_input("Height (cm)", min_value=100, max_value=250, value=175, step=1)
-    weight = st.number_input("Weight (kg)", min_value=30, max_value=250, value=70, step=1)
+    height = st.number_input(t["height"], min_value=100, max_value=250, value=175, step=1)
+    weight = st.number_input(t["weight"], min_value=30, max_value=250, value=70, step=1)
     
-    # BMI formülü: kg / m²
-    calculated_bmi = weight / ((height / 100.0) ** 2)
-    bmi = float(np.clip(calculated_bmi, 10.0, 50.0)) # Model sınırlarında kalması için clip yapıldı
+    height_m = height / 100.0
+    calculated_bmi = weight / (height_m ** 2)
+    bmi = float(np.clip(calculated_bmi, 10.0, 50.0))
     
-    # Şık bir alt bilgilendirme kutusu ile hesaplanan BMI kullanıcıya gösteriliyor
-    st.info(f"🔢 Calculated BMI: **{bmi:.1f}**")
+    # Bilgi kutusunun içindeki yazıyı da dile göre değiştiriyoruz
+    bmi_label = "Calculated BMI" if lang == "English" else "Hesaplanan BMI"
+    st.info(f"🔢 {bmi_label}: **{bmi:.1f}**")
     
-    region = st.selectbox("Region", options=["Northeast", "Northwest", "Southeast", "Southwest"])
+    region = st.selectbox(t["region"], options=["Northeast", "Northwest", "Southeast", "Southwest"])
 st.markdown('</div>', unsafe_allow_html=True)
-
 # ── Form – Lifestyle ──────────────────────────────────────────────────────────
-st.markdown('<div class="section-card"><div class="section-title">🌿 Lifestyle</div>', unsafe_allow_html=True)
+# ── Form – Lifestyle ──────────────────────────────────────────────────────────
+st.markdown(f'<div class="section-card"><div class="section-title">{t["lifestyle"]}</div>', unsafe_allow_html=True)
 col3, col4 = st.columns(2)
 with col3:
-    children = st.slider("Number of Children", min_value=0, max_value=5, value=0)
+    children = st.slider(t["children"], min_value=0, max_value=5, value=0)
 with col4:
-    smoker = st.selectbox("Do You Smoke?", options=["No", "Yes"])
+    smoker = st.selectbox(t["smoke"], options=["No", "Yes"])
 st.markdown('</div>', unsafe_allow_html=True)
 
 # ── Prediction Function (unchanged logic) ─────────────────────────────────────
@@ -256,23 +326,32 @@ if st.button("Predict my cost →"):
                         text=f"${DATASET_MIN:,} (min) ──── your estimate: ${result:,.0f} ──── ${DATASET_MAX:,} (max)")
 
             # ── Key Cost Drivers ──────────────────────────────────────────────
-            st.markdown('<div class="section-card"><div class="section-title">💡 Key Cost Drivers</div>', unsafe_allow_html=True)
-            st.markdown("""
+            # ── Key Cost Drivers ──────────────────────────────────────────────
+            st.markdown(f'<div class="section-card"><div class="section-title">{t["drivers_title"]}</div>', unsafe_allow_html=True)
+            
+            # Dile göre kart içindeki etiketleri dinamik yapıyoruz
+            smk_lbl = "Smoking" if lang == "English" else "Sigara"
+            age_lbl = "Age" if lang == "English" else "Yaş"
+            imp_high = "High impact" if lang == "English" else "Yüksek etki"
+            imp_med = "Medium impact" if lang == "English" else "Orta etki"
+            imp_low = "Low–medium" if lang == "English" else "Düşük-Orta"
+
+            st.markdown(f"""
             <div class="drivers-grid">
               <div class="driver-card">
                 <div class="driver-icon">🚬</div>
-                <div class="driver-name">Smoking</div>
-                <div class="driver-high">High impact</div>
+                <div class="driver-name">{smk_lbl}</div>
+                <div class="driver-high">{imp_high}</div>
               </div>
               <div class="driver-card">
                 <div class="driver-icon">🎂</div>
-                <div class="driver-name">Age</div>
-                <div class="driver-med">Medium impact</div>
+                <div class="driver-name">{age_lbl}</div>
+                <div class="driver-med">{imp_med}</div>
               </div>
               <div class="driver-card">
                 <div class="driver-icon">⚖️</div>
                 <div class="driver-name">BMI</div>
-                <div class="driver-low">Low–medium</div>
+                <div class="driver-low">{imp_low}</div>
               </div>
             </div>
             """, unsafe_allow_html=True)
