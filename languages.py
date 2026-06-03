@@ -1,4 +1,3 @@
-# Dil sözlükleri (Dictionary)
 texts = {
     "English": {
         "sidebar_title": "### 📊 Model Info",
@@ -20,7 +19,9 @@ texts = {
         "res_annual": "Estimated Annual Cost",
         "res_month": "month",
         "sit_dataset": "**Where does your estimate sit in the dataset?**",
-        "drivers_title": "💡 Key Cost Drivers"
+        "drivers_title": "💡 Key Cost Drivers",
+        "tips_title": "💡 Personalized tips for you:",
+        "bmi_tip": "Your BMI ({bmi_val:.1f}) is above 30. Reducing it can noticeably lower your premium."
     },
     "Türkçe": {
         "sidebar_title": "### 📊 Model Bilgisi",
@@ -42,6 +43,8 @@ texts = {
         "res_annual": "Tahmini Yıllık Maliyet",
         "res_month": "ay",
         "sit_dataset": "**Tahmininiz veri setinde nerede yer alıyor?**",
-        "drivers_title": "💡 Temel Maliyet Sürücüleri"
+        "drivers_title": "💡 Temel Maliyet Sürücüleri",
+        "tips_title": "💡 Size Özel Kişiselleştirilmiş İpuçları:",
+        "bmi_tip": "Vücut Kitle İndeksiniz ({bmi_val:.1f}) 30'un üzerinde. BMI değerini düşürmek sigorta priminizi gözle görülür şekilde azaltabilir."
     }
 }

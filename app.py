@@ -20,6 +20,12 @@ if "prediction_history" not in st.session_state:
 # ── Custom CSS ─────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
+/* Sol taraftaki açılır kapanır sidebar'ı ve okunu tamamen görünmez yap */
+[data-testid="stSidebar"], [data-testid="stSidebarCollapseButton"] {
+    display: none !important;
+}
+
+<style>
 /* ---- Global ---- */
 [data-testid="stAppViewContainer"] {
     background-color: #f8faf9;
@@ -27,10 +33,7 @@ st.markdown("""
 [data-testid="stHeader"] { background: transparent; }
 
 /* ---- Sidebar ---- */
-[data-testid="stSidebar"] {
-    background-color: #ffffff;
-    border-right: 1px solid #e0ede8;
-}
+            
 
 /* ---- Buttons ---- */
 div.stButton > button {
@@ -167,38 +170,26 @@ lang = st.sidebar.selectbox("🌐 Language / Dil", options=["English", "Türkçe
 # Seçilen dile göre aktif metin setini atıyoruz
 t = texts[lang]
 
-# ── Sidebar ───────────────────────────────────────────────────────────────────
-with st.sidebar:
-    st.markdown(t["sidebar_title"])
-    st.markdown("---")
-    
-    # Dile göre metrik etiketleri
-    alg_lbl = "Algorithm" if lang == "English" else "Algoritma"
-    feat_lbl = "Features" if lang == "English" else "Öznitelikler"
-    imp_lbl = "Feature importance" if lang == "English" else "Öznitelik Önem Derecesi"
-    
-    st.metric(alg_lbl, "Gradient Boosting")
-    st.metric("R² Score", "0.89")
-    st.metric(feat_lbl, "8")
-    st.markdown("---")
-    st.markdown(f"**{imp_lbl}**")
-    
-    # İlerleme çubuklarının üzerindeki yazılar
-    smk_side = "🚬 Smoking" if lang == "English" else "🚬 Sigara Kullanımı"
-    age_side = "🎂 Age" if lang == "English" else "🎂 Yaş"
-    bmi_side = "⚖️ BMI" if lang == "English" else "⚖️ BMI (Vücut Kitle)"
-    chld_side = "👶 Children" if lang == "English" else "👶 Çocuk Sayısı"
-    reg_side = "📍 Region" if lang == "English" else "📍 Bölge"
-    
-    st.progress(0.95, text=smk_side)
-    st.progress(0.60, text=age_side)
-    st.progress(0.40, text=bmi_side)
-    st.progress(0.20, text=chld_side)
-    st.progress(0.10, text=reg_side)
-    st.markdown("---")
-    
-    caption_txt = "Insurance Cost Estimator · Week 4" if lang == "English" else "Sigorta Maliyet Tahmini · 4. Hafta"
-    st.caption(caption_txt)
+# ── Top Bar (Language & Quick Info) ──────────────────────────────────────────
+# Sayfanın en üstüne yan yana iki kolon açıyoruz
+top_col1, top_col2 = st.columns([4, 1])
+
+with top_col2:
+    # Dil seçimi artık sol barda değil, sağ üst köşede kibar bir kutu olarak duracak
+    lang = st.selectbox("🌐 Language", options=["English", "Türkçe"], label_visibility="collapsed")
+
+# languages.py dosyasından aktif metinleri çekme kuralımız aynen kalıyor
+from languages import texts
+t = texts[lang]
+
+with top_col1:
+    # Sol üst köşeye el yapımı hissi veren küçük bir model künyesi koyuyoruz
+    st.markdown("""
+    <span style='background: #f1f5f9; color: #475569; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500;'>
+      ⚡ Gradient Boosting Model (R²: 0.89)
+    </span>
+    """, unsafe_allow_html=True)
+
 # ── Page Header ───────────────────────────────────────────────────────────────
 st.markdown(f"""
 <div class="page-header">
@@ -340,8 +331,13 @@ if st.button("Predict my cost →"):
             tips = []
             if smoker == "Yes":
                 tips.append("🚬 Smoking is the single largest cost driver — it can multiply your premium by 3–4×.")
-            if bmi > 30:
-                tips.append(f"⚖️ Your BMI ({bmi:.1f}) is above 30. Reducing it can noticeably lower your premium.")
+            # ── Personalized Tips Section ────────────────────────────────────────────────
+            if bmi > 30.0:
+                st.markdown(f"##### {t['tips_title']}")
+                # .format(bmi_val=bmi) kullanarak BMI değerini dile göre metnin içine gömüyoruz
+                tip_msg = t["bmi_tip"].format(bmi_val=bmi)
+                
+                st.info(tip_msg)
             if age > 50:
                 tips.append("🎂 Premiums increase significantly after age 50 — consider locking in a plan early.")
             if tips:
