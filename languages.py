@@ -1,0 +1,47 @@
+# Dil sözlükleri (Dictionary)
+texts = {
+    "English": {
+        "sidebar_title": "### 📊 Model Info",
+        "page_title": "🏥 Insurance Cost Estimator",
+        "page_sub": "Fill in the details below to get a personalized annual cost estimate.",
+        "personal_info": "👤 Personal Information",
+        "age": "Age",
+        "gender": "Gender",
+        "height": "Height (cm)",
+        "weight": "Weight (kg)",
+        "region": "Region",
+        "lifestyle": "🌿 Lifestyle",
+        "children": "Number of Children",
+        "smoke": "Do You Smoke?",
+        "predict_btn": "Predict my cost →",
+        "err_validation": "⚠️ Age must be 18+ and BMI must be greater than 10.",
+        "err_model": "Model files are missing — cannot predict.",
+        "calc_spinner": "Calculating...",
+        "res_annual": "Estimated Annual Cost",
+        "res_month": "month",
+        "sit_dataset": "**Where does your estimate sit in the dataset?**",
+        "drivers_title": "💡 Key Cost Drivers"
+    },
+    "Türkçe": {
+        "sidebar_title": "### 📊 Model Bilgisi",
+        "page_title": "🏥 Sigorta Maliyeti Tahmin Sistemi",
+        "page_sub": "Kişiselleştirilmiş yıllık maliyet tahminini almak için aşağıdaki detayları doldurun.",
+        "personal_info": "👤 Kişisel Bilgiler",
+        "age": "Yaş",
+        "gender": "Cinsiyet",
+        "height": "Boy (cm)",
+        "weight": "Kilo (kg)",
+        "region": "Bölge",
+        "lifestyle": "🌿 Yaşam Tarzı",
+        "children": "Çocuk Sayısı",
+        "smoke": "Sigara Kullanıyor musunuz?",
+        "predict_btn": "Maliyeti Tahmin Et →",
+        "err_validation": "⚠️ Yaş 18+ ve BMI 10'dan büyük olmalıdır.",
+        "err_model": "Model dosyaları eksik — tahmin yapılamıyor.",
+        "calc_spinner": "Hesaplanıyor...",
+        "res_annual": "Tahmini Yıllık Maliyet",
+        "res_month": "ay",
+        "sit_dataset": "**Tahmininiz veri setinde nerede yer alıyor?**",
+        "drivers_title": "💡 Temel Maliyet Sürücüleri"
+    }
+}
