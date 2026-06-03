@@ -399,28 +399,56 @@ if st.button("Predict my cost →"):
 
 
 # ── Prediction History UI Section ─────────────────────────────────────────────
-# Eğer hafızada en az 1 tane bile tahmin geçmişi varsa bu alanı gösteriyoruz
 if not st.session_state.prediction_history.empty:
     st.markdown("---")
     
-    # Dile göre başlık ve buton yazıları
-    hist_title = "📋 Prediction History" if lang == "English" else "📋 Tahmin Geçmişi Records"
+    # Dile göre başlık ve metrik isimleri
+    hist_title = "📋 Prediction History" if lang == "English" else "📋 Tahmin Geçmişi"
     hist_sub = "Below are the calculations made during this session:" if lang == "English" else "Bu oturumda yapılan hesaplamalar:"
     download_btn_lbl = "📥 Download History as CSV" if lang == "English" else "📥 Geçmişi CSV Olarak İndir"
+    clear_btn_lbl = "🗑️ Clear History" if lang == "English" else "🗑️ Geçmişi Temizle"
     
     st.markdown(f"### {hist_title}")
     st.caption(hist_sub)
+
+    # 📊 CANLI METRİK KARTLARI (Oturum İstatistikleri)
+    history_df = st.session_state.prediction_history
+    total_queries = len(history_df)
+    avg_cost = history_df["Estimated Cost ($)"].mean()
+    max_cost = history_df["Estimated Cost ($)"].max()
+
+    m_col1, m_col2, m_col3 = st.columns(3)
+    with m_col1:
+        lbl_q = "Total Predictions" if lang == "English" else "Toplam Sorgulama"
+        st.metric(lbl_q, f"{total_queries}")
+    with m_col2:
+        lbl_a = "Average Estimate" if lang == "English" else "Ortalama Tahmin"
+        st.metric(lbl_a, f"${avg_cost:,.2f}")
+    with m_col3:
+        lbl_m = "Highest Estimate" if lang == "English" else "En Yüksek Tahmin"
+        st.metric(lbl_m, f"${max_cost:,.2f}")
+
+    st.markdown("<br>", unsafe_allow_html=True)
     
-    # Geçmiş tablosunu şık bir Streamlit veri tablosu olarak gösteriyoruz
-    st.dataframe(st.session_state.prediction_history, use_container_width=True)
+    # Geçmiş tablosunu gösterme
+    st.dataframe(history_df, use_container_width=True)
     
-    # Tabloyu CSV formatına dönüştürme fonksiyonu
-    csv_data = st.session_state.prediction_history.to_csv(index=False).encode('utf-8')
+    # BUTONLAR İÇİN YAN YANA KOLONLAR (İndir & Temizle)
+    b_col1, b_col2 = st.columns([1, 1])
     
-    # Kullanıcının bilgisayarına indirmesini sağlayan buton
-    st.download_button(
-        label=download_btn_lbl,
-        data=csv_data,
-        file_name="insurance_predictions_history.csv",
-        mime="text/csv"
-    )
+    with b_col1:
+        csv_data = history_df.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label=download_btn_lbl,
+            data=csv_data,
+            file_name="insurance_predictions_history.csv",
+            mime="text/csv"
+        )
+        
+    with b_col2:
+        # Tek tıkla geçmişi sıfırlayan reset mekanizması
+        if st.button(clear_btn_lbl):
+            st.session_state.prediction_history = pd.DataFrame(columns=[
+                "Age", "Height (cm)", "Weight (kg)", "BMI", "Gender", "Children", "Smoker", "Region", "Estimated Cost ($)"
+            ])
+            st.rerun()  # Sayfayı anında yenileyip arayüzü günceller
