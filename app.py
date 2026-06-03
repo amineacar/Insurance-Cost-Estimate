@@ -180,10 +180,21 @@ st.markdown("""
 st.markdown('<div class="section-card"><div class="section-title">👤 Personal Information</div>', unsafe_allow_html=True)
 col1, col2 = st.columns(2)
 with col1:
-    age = st.number_input("Age", min_value=18, max_value=100, value=25)
+    # Geliştirme 1: Yaş için alt ve üst güvenlik sınırları (18-100) eklendi
+    age = st.number_input("Age", min_value=18, max_value=100, value=25, step=1)
     sex = st.selectbox("Gender", options=["Male", "Female"])
 with col2:
-    bmi = st.number_input("BMI (Body Mass Index)", min_value=10.0, max_value=50.0, value=25.0, step=0.1)
+    # Geliştirme 2: Kullanıcıların BMI değerini otomatik hesaplayan Boy & Kilo entegrasyonu
+    height = st.number_input("Height (cm)", min_value=100, max_value=250, value=175, step=1)
+    weight = st.number_input("Weight (kg)", min_value=30, max_value=250, value=70, step=1)
+    
+    # BMI formülü: kg / m²
+    calculated_bmi = weight / ((height / 100.0) ** 2)
+    bmi = float(np.clip(calculated_bmi, 10.0, 50.0)) # Model sınırlarında kalması için clip yapıldı
+    
+    # Şık bir alt bilgilendirme kutusu ile hesaplanan BMI kullanıcıya gösteriliyor
+    st.info(f"🔢 Calculated BMI: **{bmi:.1f}**")
+    
     region = st.selectbox("Region", options=["Northeast", "Northwest", "Southeast", "Southwest"])
 st.markdown('</div>', unsafe_allow_html=True)
 
@@ -214,8 +225,9 @@ def predict_insurance(age, sex, bmi, children, smoker, region):
 
 # ── Predict Button ─────────────────────────────────────────────────────────────
 if st.button("Predict my cost →"):
-    if age <= 0 or bmi <= 0:
-        st.error("Age and BMI must be greater than 0.")
+    # Geliştirme 3: Hatalı veya mantıksız veri girişine karşı backend doğrulama kontrolü
+    if age < 18 or bmi < 10.0:
+        st.error("⚠️ Age must be 18+ and BMI must be greater than 10.")
     elif not model_loaded:
         st.error("Model files are missing — cannot predict.")
     else:
@@ -224,7 +236,6 @@ if st.button("Predict my cost →"):
             monthly = result / 12
 
             # ── Result Card ───────────────────────────────────────────────────
-            # Cost range for the dataset (approximate min/max for progress bar)
             DATASET_MIN = 1_121
             DATASET_MAX = 63_770
             progress_val = float(np.clip((result - DATASET_MIN) / (DATASET_MAX - DATASET_MIN), 0, 1))
