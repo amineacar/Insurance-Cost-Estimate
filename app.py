@@ -3,146 +3,175 @@ import pandas as pd
 import pickle
 import numpy as np
 
+
+# Eğer get_ms_sql_connection fonksiyonu başka bir dosyadaysa (örn: database.py) oradan import etmelisin:
+# from database import get_ms_sql_connection
+
+# Eğer projenin içinde tanımlıysa, buraya örnek bir fonksiyon bırakıyorum (kendi bağlantı bilgine göre güncelleyebilirsin):
+def get_ms_sql_connection():
+    import pyodbc
+    # Örnek bağlantı stringi
+    conn_str = 'DRIVER={ODBC Driver 17 for SQL Server};SERVER=your_server;DATABASE=your_db;UID=your_user;PWD=your_password'
+    return pyodbc.connect(conn_str)
+
 # ── Page Config ────────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="Insurance Cost Estimator",
-    page_icon="🏥",
-    layout="centered"
+    page_title="Health Insurance Cost Estimator",
+    page_icon="🩺",
+    layout="wide"
 )
 
 # ── Custom CSS ─────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-/* ---- Global ---- */
-[data-testid="stAppViewContainer"] {
-    background-color: #f8faf9;
-}
-[data-testid="stHeader"] { background: transparent; }
-
-/* ---- Sidebar ---- */
-[data-testid="stSidebar"] {
-    background-color: #ffffff;
-    border-right: 1px solid #e0ede8;
+/* Sidebar gizle */
+[data-testid="stSidebar"],
+[data-testid="stSidebarCollapseButton"]{
+    display:none !important;
 }
 
-/* ---- Buttons ---- */
-div.stButton > button {
-    background-color: #1D9E75;
-    color: white;
-    border: none;
-    border-radius: 10px;
-    padding: 0.65rem 1.5rem;
-    font-size: 16px;
-    font-weight: 600;
-    width: 100%;
-    transition: background 0.2s ease;
-}
-div.stButton > button:hover {
-    background-color: #0F6E56;
-    color: white;
+/* Genel arkaplan */
+[data-testid="stAppViewContainer"]{
+    background: #000000 !important;
 }
 
-/* ---- Section card ---- */
-.section-card {
-    background: #ffffff;
-    border: 1px solid #d4ece3;
-    border-radius: 14px;
-    padding: 1.4rem 1.6rem 1rem;
-    margin-bottom: 1.2rem;
-}
-.section-title {
-    font-size: 13px;
-    font-weight: 600;
-    color: #0F6E56;
-    text-transform: uppercase;
-    letter-spacing: 0.07em;
-    margin-bottom: 1rem;
-    display: flex;
-    align-items: center;
-    gap: 6px;
+[data-testid="stHeader"]{
+    background:transparent;
 }
 
-/* ---- Result card ---- */
-.result-card {
-    background: linear-gradient(135deg, #e1f5ee 0%, #f0faf6 100%);
-    border: 1px solid #5DCAA5;
-    border-radius: 14px;
-    padding: 1.6rem;
-    margin: 1.2rem 0;
-}
-.result-label {
-    font-size: 12px;
-    font-weight: 600;
-    color: #0F6E56;
-    text-transform: uppercase;
-    letter-spacing: 0.07em;
-    margin-bottom: 6px;
-}
-.result-amount {
-    font-size: 38px;
-    font-weight: 700;
-    color: #085041;
-    line-height: 1.1;
-}
-.result-monthly {
-    font-size: 15px;
-    color: #1D9E75;
-    margin-top: 4px;
-    margin-bottom: 1rem;
-}
-.divider {
-    height: 1px;
-    background: #b2ddd0;
-    margin: 1rem 0;
-}
-.model-pill {
-    display: inline-block;
-    background: #ffffff;
-    border: 1px solid #b2ddd0;
-    border-radius: 20px;
-    padding: 4px 12px;
-    font-size: 12px;
-    color: #0F6E56;
+.block-container{
+    max-width:1200px;
+    padding-top:2rem;
 }
 
-/* ---- Driver cards ---- */
-.drivers-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-    margin-top: 0.8rem;
+/* Header */
+.page-header{
+    text-align:center;
+    margin-bottom:2.5rem;
 }
-.driver-card {
-    background: #f8faf9;
-    border: 1px solid #d4ece3;
-    border-radius: 10px;
-    padding: 12px 10px;
-    text-align: center;
-}
-.driver-icon { font-size: 20px; margin-bottom: 4px; }
-.driver-name { font-size: 12px; color: #6b7c74; margin-bottom: 4px; }
-.driver-high  { font-size: 12px; font-weight: 600; color: #D85A30; }
-.driver-med   { font-size: 12px; font-weight: 600; color: #BA7517; }
-.driver-low   { font-size: 12px; font-weight: 600; color: #1D9E75; }
 
-/* ---- Page header ---- */
-.page-header {
-    margin-bottom: 1.8rem;
+.page-title{
+    font-size:56px;
+    font-weight:900;
+    letter-spacing:-1px;
+    background: linear-gradient(90deg, #0F766E, #14B8A6);
+    -webkit-background-clip:text;
+    -webkit-text-fill-color:transparent;
 }
-.page-title {
-    font-size: 28px;
-    font-weight: 700;
-    color: #085041;
-    margin-bottom: 4px;
+
+.page-sub{
+    font-size:18px;
+    color:#64748b;
 }
-.page-sub {
-    font-size: 15px;
-    color: #6b7c74;
+
+/* Kartlar */
+.section-card{
+    background: rgba(255,255,255,0.06);
+    backdrop-filter: blur(18px);
+    border-radius:24px;
+    padding:28px;
+    margin-bottom:24px;
+    border: 1px solid rgba(255,255,255,0.12);
+    box-shadow: 0 10px 35px rgba(0,0,0,.35);
+    transition:.3s;
+}
+
+.section-card:hover{
+    transform:translateY(-3px);
+}
+
+.section-title{
+    font-size:14px;
+    font-weight:700;
+    color:#0F766E;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+}
+
+/* Butonlar */
+div.stButton > button{
+    width:100%;
+    border:none;
+    border-radius:16px;
+    padding:15px;
+    font-size:18px;
+    font-weight:700;
+    color:white;
+    background: linear-gradient(135deg, #10B981, #059669);
+    box-shadow: 0 10px 25px rgba(16,185,129,.25);
+    transition:.3s;
+}
+
+div.stButton > button:hover{
+    transform:translateY(-2px);
+    box-shadow: 0 15px 35px rgba(16,185,129,.35);
+}
+
+/* Sonuç kartı */
+.result-card{
+    background: linear-gradient(135deg, #0F766E, #14B8A6);
+    border-radius:20px;
+    padding:20px 24px;
+    width:100%;
+    margin:20px 0;
+    box-shadow: 0 10px 25px rgba(15,118,110,.18);
+}
+
+.result-label{
+    color:#d1fae5;
+    font-size:13px;
+    text-transform:uppercase;
+    letter-spacing:.15em;
+}
+
+.result-amount{
+    color:white;
+    font-size:44px;
+    font-weight:800;
+}
+
+.result-monthly{
+    color:#ecfdf5;
+    font-size:18px;
+}
+
+.stNumberInput, .stSelectbox{
+    border-radius:14px;
+}
+            
+            label, p, span {
+    color: #f1f5f9 !important;
+}
+
+.hero-title{
+    font-size:52px;
+    font-weight:900;
+    color:white;
+    line-height:1.1;
+    letter-spacing:-1px;
+    text-align:center;
+}
+
+.hero-highlight{
+    background: linear-gradient(135deg, #10B981, #14B8A6, #06B6D4);
+    -webkit-background-clip:text;
+    -webkit-text-fill-color:transparent;
+}
+
+.hero-subtitle{
+    margin-top:14px;
+    font-size:18px;
+    color:#cbd5e1;
+    max-width:750px;
+    margin-left:auto;
+    margin-right:auto;
+    line-height:1.6;
+    text-align:center;
 }
 </style>
 """, unsafe_allow_html=True)
 
-# ── Load Model ────────────────────────────────────────────────────────────────
+# ── 4. Load Model ────────────────────────────────────────────────────────────────
 try:
     model = pickle.load(open('model.pkl', 'rb'))
     scaler = pickle.load(open('scaler.pkl', 'rb'))
@@ -168,11 +197,48 @@ with st.sidebar:
     st.markdown("---")
     st.caption("Insurance Cost Estimator · Week 4")
 
-# ── Page Header ───────────────────────────────────────────────────────────────
+# ── Değişken Tanımlamaları (Hataları Önleyen Kısım) ───────────────────────────
+# Pylance hatalarını çözmek için kolonları ve dil sözlüğünü tanımlıyoruz:
+top_col1, top_col2 = st.columns([3, 1])
+
+texts = {
+    "English": {
+        "height": "Height (cm)",
+        "weight": "Weight (kg)",
+        "children": "Number of Children",
+        "smoke": "Do you smoke?",
+        "region": "Region"
+    },
+    "Türkçe": {
+        "height": "Boy (cm)",
+        "weight": "Kilo (kg)",
+        "children": "Çocuk Sayısı",
+        "smoke": "Sigara kullanıyor musunuz?",
+        "region": "Bölge"
+    }
+}
+
+with top_col2:
+    lang = st.selectbox("🌐 Language", options=["English", "Türkçe"], label_visibility="collapsed")
+
+t = texts[lang]
+
+with top_col1:
+    st.markdown("""
+    <span style='background: #f1f5f9; color: #475569; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500;'>
+      ⚡ Gradient Boosting Model (R²: 0.89)
+    </span>
+    """, unsafe_allow_html=True)
+
+# ── 6. Page Header ───────────────────────────────────────────────────────────────
 st.markdown("""
-<div class="page-header">
-  <div class="page-title">🏥 Insurance Cost Estimator</div>
-  <div class="page-sub">Fill in the details below to get a personalized annual cost estimate.</div>
+<div style="text-align:center; margin-top:30px;">
+    <div class="hero-title">
+        🩺 Health Insurance <span class="hero-highlight">Cost Estimator</span>
+    </div>
+    <div class="hero-subtitle">
+        Predict insurance premiums instantly using machine learning and risk analytics.
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -183,20 +249,42 @@ with col1:
     age = st.number_input("Age", min_value=18, max_value=100, value=25)
     sex = st.selectbox("Gender", options=["Male", "Female"])
 with col2:
-    bmi = st.number_input("BMI (Body Mass Index)", min_value=10.0, max_value=50.0, value=25.0, step=0.1)
-    region = st.selectbox("Region", options=["Northeast", "Northwest", "Southeast", "Southwest"])
+    height = st.number_input(t["height"], min_value=100, max_value=250, value=175, step=1)
+    weight = st.number_input(t["weight"], min_value=30, max_value=250, value=70, step=1)
+    
+    height_m = height / 100.0
+    calculated_bmi = weight / (height_m ** 2)
+    bmi = float(np.clip(calculated_bmi, 10.0, 50.0))
+    
+    bmi_label = "Calculated BMI" if lang == "English" else "Hesaplanan BMI"
+    st.info(f"🔢 {bmi_label}: **{bmi:.1f}**")
+    
 st.markdown('</div>', unsafe_allow_html=True)
 
 # ── Form – Lifestyle ──────────────────────────────────────────────────────────
 st.markdown('<div class="section-card"><div class="section-title">🌿 Lifestyle</div>', unsafe_allow_html=True)
 col3, col4 = st.columns(2)
 with col3:
-    children = st.slider("Number of Children", min_value=0, max_value=5, value=0)
+    children = st.slider(
+        t["children"],
+        min_value=0,
+        max_value=5,
+        value=0
+    )
+
 with col4:
-    smoker = st.selectbox("Do You Smoke?", options=["No", "Yes"])
+    smoker = st.selectbox(
+        t["smoke"],
+        options=["No", "Yes"]
+    )
+
+    region = st.selectbox(
+        t["region"],
+        options=["Northeast", "Northwest", "Southeast", "Southwest"]
+    )
 st.markdown('</div>', unsafe_allow_html=True)
 
-# ── Prediction Function (unchanged logic) ─────────────────────────────────────
+# ── Prediction Function ───────────────────────────────────────────────────────
 def predict_insurance(age, sex, bmi, children, smoker, region):
     numerical_inputs = np.array([[age, bmi]])
     scaled_numerical = scaler.transform(numerical_inputs)
@@ -224,49 +312,24 @@ if st.button("Predict my cost →"):
             monthly = result / 12
 
             # ── Result Card ───────────────────────────────────────────────────
-            # Cost range for the dataset (approximate min/max for progress bar)
             DATASET_MIN = 1_121
             DATASET_MAX = 63_770
             progress_val = float(np.clip((result - DATASET_MIN) / (DATASET_MAX - DATASET_MIN), 0, 1))
 
             st.markdown(f"""
             <div class="result-card">
-              <div class="result-label">Estimated Annual Cost</div>
-              <div class="result-amount">${result:,.2f}</div>
-              <div class="result-monthly">≈ ${monthly:,.2f} / month</div>
-              <div class="divider"></div>
-              <span class="model-pill">📈 Gradient Boosting · R² 0.89</span>
+            <div class="result-label">Estimated Annual Cost</div>
+            <div class="result-amount">${result:,.2f}</div>
+            <div class="result-monthly">≈ ${monthly:,.2f} / month</div>
             </div>
             """, unsafe_allow_html=True)
 
-            # ── Progress bar: where does this person's cost sit? ──────────────
+            # ── Progress bar ──────────────────────────────────────────────────
             st.markdown("**Where does your estimate sit in the dataset?**")
             st.progress(progress_val,
                         text=f"${DATASET_MIN:,} (min) ──── your estimate: ${result:,.0f} ──── ${DATASET_MAX:,} (max)")
 
-            # ── Key Cost Drivers ──────────────────────────────────────────────
-            st.markdown('<div class="section-card"><div class="section-title">💡 Key Cost Drivers</div>', unsafe_allow_html=True)
-            st.markdown("""
-            <div class="drivers-grid">
-              <div class="driver-card">
-                <div class="driver-icon">🚬</div>
-                <div class="driver-name">Smoking</div>
-                <div class="driver-high">High impact</div>
-              </div>
-              <div class="driver-card">
-                <div class="driver-icon">🎂</div>
-                <div class="driver-name">Age</div>
-                <div class="driver-med">Medium impact</div>
-              </div>
-              <div class="driver-card">
-                <div class="driver-icon">⚖️</div>
-                <div class="driver-name">BMI</div>
-                <div class="driver-low">Low–medium</div>
-              </div>
-            </div>
-            """, unsafe_allow_html=True)
-
-            # Personalized tip
+            # Personalized tips
             tips = []
             if smoker == "Yes":
                 tips.append("🚬 Smoking is the single largest cost driver — it can multiply your premium by 3–4×.")
@@ -280,4 +343,64 @@ if st.button("Predict my cost →"):
                 for tip in tips:
                     st.info(tip)
 
-            st.markdown('</div>', unsafe_allow_html=True)
+# ── 11. MS SQL Veri Çekme Motoru & Tablo/Grafik Paneli ──────────────────────────
+try:
+    conn = get_ms_sql_connection()
+    query = """
+        SELECT age AS Age, height AS [Height (cm)], weight AS [Weight (kg)], 
+               bmi AS BMI, gender AS Gender, children AS Children, 
+               smoker AS Smoker, region AS Region, estimated_cost AS [Estimated Cost ($)] 
+        FROM predictions 
+        ORDER BY id DESC
+    """
+    history_df = pd.read_sql_query(query, conn)
+    conn.close()
+except Exception:
+    history_df = pd.DataFrame()
+
+if not history_df.empty:
+    st.markdown("---")
+    
+    hist_title = "📊 Estimation History" if lang == "English" else "📊 Tahmin Geçmişi"
+    hist_sub = "Below are the calculations made during this session:" if lang == "English" else "Bu oturumda yapılan hesaplamalar:"
+    download_btn_lbl = "📥 Download History as CSV" if lang == "English" else "📥 Geçmişi CSV Olarak İndir"
+    clear_btn_lbl = "🗑️ Clear History" if lang == "English" else "🗑️ Geçmişi Temizle"
+    
+    st.markdown(f"### {hist_title}")
+    st.caption(hist_sub)
+
+    # Canlı Metrik Kartları
+    total_queries = len(history_df)
+    avg_cost = history_df["Estimated Cost ($)"].mean() if total_queries > 0 else 0.0
+    max_cost = history_df["Estimated Cost ($)"].max() if total_queries > 0 else 0.0
+
+    m_col1, m_col2, m_col3 = st.columns(3)
+    with m_col1:
+        lbl_q = "Total Predictions" if lang == "English" else "Toplam Sorgulama"
+        st.metric(lbl_q, f"{total_queries}")
+    with m_col2:
+        lbl_a = "Average Estimate" if lang == "English" else "Ortalama Tahmin"
+        st.metric(lbl_a, f"${avg_cost:,.2f}")
+    with m_col3:
+        lbl_m = "Highest Estimate" if lang == "English" else "En Yüksek Tahmin"
+        st.metric(lbl_m, f"${max_cost:,.2f}")
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.dataframe(history_df, use_container_width=True)
+    
+    b_col1, b_col2 = st.columns([1, 1])
+    with b_col1:
+        csv_data = history_df.to_csv(index=False).encode('utf-8')
+        st.download_button(label=download_btn_lbl, data=csv_data, file_name="insurance_predictions_history.csv", mime="text/csv")
+        
+    with b_col2:
+        if st.button(clear_btn_lbl):
+            try:
+                conn = get_ms_sql_connection()
+                cursor = conn.cursor()
+                cursor.execute("TRUNCATE TABLE predictions")
+                conn.commit()
+                conn.close()
+            except Exception:
+                pass
+            st.rerun()
