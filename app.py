@@ -4,12 +4,12 @@ import pickle
 import numpy as np
 import pyodbc
 import os
-from languages import texts
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 import io
+from languages import texts
 
 # ── 1. Veritabanı Altyapısı (MS SQL Server) ───────────────────────────────────────
 SERVER_NAME = "localhost"  # Kendi SQL Server ismine göre değiştirebilirsin
@@ -64,139 +64,196 @@ init_ms_sql()
 
 # ── 2. Page Config ────────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="Insurance Cost Estimator",
-    page_icon="🏥",
-    layout="centered"
+    page_title="Health Insurance Cost Estimator",
+    page_icon="🩺",
+    layout="wide"
 )
 
-# ── 3. Custom CSS (Arayüz Tasarımın Aynen Korundu) ─────────────────────────────────
+# ── 3. Custom CSS (Premium Dark Theme & Custom Layouts) ───────────────────────────
 st.markdown("""
 <style>
-/* Sol taraftaki açılır kapanır sidebar'ı ve okunu tamamen görünmez yap */
-[data-testid="stSidebar"], [data-testid="stSidebarCollapseButton"] {
-    display: none !important;
+/* Sidebar gizle */
+[data-testid="stSidebar"],
+[data-testid="stSidebarCollapseButton"]{
+    display:none !important;
 }
 
-/* ---- Global ---- */
-[data-testid="stAppViewContainer"] {
-    background-color: #f1f1f0 !important; /* İstediğin açık taş rengi buraya sabitlendi */
-}
-[data-testid="stHeader"] { background: transparent; }
-
-/* ---- Buttons ---- */
-div.stButton > button {
-    background-color: #1D9E75;
-    color: white;
-    border: none;
-    border-radius: 10px;
-    padding: 0.65rem 1.5rem;
-    font-size: 16px;
-    font-weight: 600;
-    width: 100%;
-    transition: background 0.2s ease;
-}
-div.stButton > button:hover {
-    background-color: #0F6E56;
-    color: white;
+/* Genel arkaplan */
+[data-testid="stAppViewContainer"]{
+    background: #000000 !important;
 }
 
-/* ---- Section card ---- */
-.section-card {
-    background: #ffffff;
-    border: 1px solid #d4ece3;
-    border-radius: 14px;
-    padding: 1.4rem 1.6rem 1rem;
-    margin-bottom: 1.2rem;
-}
-.section-title {
-    font-size: 13px;
-    font-weight: 600;
-    color: #0F6E56;
-    text-transform: uppercase;
-    letter-spacing: 0.07em;
-    margin-bottom: 1rem;
-    display: flex;
-    align-items: center;
-    gap: 6px;
+[data-testid="stHeader"]{
+    background:transparent;
 }
 
-/* ---- Result card ---- */
-.result-card {
-    background: linear-gradient(135deg, #e1f5ee 0%, #f0faf6 100%);
-    border: 1px solid #5DCAA5;
-    border-radius: 14px;
-    padding: 1.6rem;
-    margin: 1.2rem 0;
+.block-container{
+    max-width:1200px;
+    padding-top:2rem;
 }
-.result-label {
-    font-size: 12px;
-    font-weight: 600;
-    color: #0F6E56;
-    text-transform: uppercase;
-    letter-spacing: 0.07em;
-    margin-bottom: 6px;
+
+/* Header */
+.page-header{
+    text-align:center;
+    margin-bottom:2.5rem;
 }
-.result-amount {
-    font-size: 38px;
-    font-weight: 700;
-    color: #085041;
+
+.page-title{
+    font-size:56px;
+    font-weight:900;
+    letter-spacing:-1px;
+    background: linear-gradient(90deg, #0F766E, #14B8A6);
+    -webkit-background-clip:text;
+    -webkit-text-fill-color:transparent;
+}
+
+.page-sub{
+    font-size:18px;
+    color:#64748b;
+}
+
+/* Kartlar */
+.section-card{
+    background: rgba(255,255,255,0.06);
+    backdrop-filter: blur(18px);
+    border-radius:24px;
+    padding:28px;
+    margin-bottom:24px;
+    border: 1px solid rgba(255,255,255,0.12);
+    box-shadow: 0 10px 35px rgba(0,0,0,.35);
+    transition:.3s;
+}
+
+.section-card:hover{
+    transform:translateY(-3px);
+}
+
+.section-title{
+    font-size:14px;
+    font-weight:700;
+    color:#14B8A6;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    margin-bottom: 15px;
+}
+
+/* Butonlar */
+div.stButton > button{
+    width:100%;
+    border:none;
+    border-radius:16px;
+    padding:15px;
+    font-size:18px;
+    font-weight:700;
+    color:white;
+    background: linear-gradient(135deg, #10B981, #059669);
+    box-shadow: 0 10px 25px rgba(16,185,129,.25);
+    transition:.3s;
+}
+
+div.stButton > button:hover{
+    transform:translateY(-2px);
+    box-shadow: 0 15px 35px rgba(16,185,129,.35);
+}
+
+/* Sonuç kartı */
+.result-card{
+    background: linear-gradient(135deg, #0F766E, #14B8A6);
+    border-radius:20px;
+    padding:24px;
+    width:100%;
+    margin:20px 0;
+    box-shadow: 0 10px 25px rgba(15,118,110,.18);
+}
+
+.result-label{
+    color:#d1fae5;
+    font-size:13px;
+    text-transform:uppercase;
+    letter-spacing:.15em;
+    margin-bottom: 4px;
+}
+
+.result-amount{
+    color:white;
+    font-size:44px;
+    font-weight:800;
     line-height: 1.1;
 }
-.result-monthly {
-    font-size: 15px;
-    color: #1D9E75;
+
+.result-monthly{
+    color:#ecfdf5;
+    font-size:18px;
     margin-top: 4px;
-    margin-bottom: 1rem;
-}
-.divider {
-    height: 1px;
-    background: #b2ddd0;
-    margin: 1rem 0;
-}
-.model-pill {
-    display: inline-block;
-    background: #ffffff;
-    border: 1px solid #b2ddd0;
-    border-radius: 20px;
-    padding: 4px 12px;
-    font-size: 12px;
-    color: #0F6E56;
 }
 
-/* ---- Driver cards ---- */
+/* Driver cards */
 .drivers-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
+    gap: 12px;
     margin-top: 0.8rem;
 }
 .driver-card {
-    background: #f8faf9;
-    border: 1px solid #d4ece3;
-    border-radius: 10px;
-    padding: 12px 10px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    padding: 16px 12px;
     text-align: center;
 }
-.driver-icon { font-size: 20px; margin-bottom: 4px; }
-.driver-name { font-size: 12px; color: #6b7c74; margin-bottom: 4px; }
-.driver-high  { font-size: 12px; font-weight: 600; color: #D85A30; }
-.driver-med   { font-size: 12px; font-weight: 600; color: #BA7517; }
-.driver-low   { font-size: 12px; font-weight: 600; color: #1D9E75; }
+.driver-icon { font-size: 24px; margin-bottom: 4px; }
+.driver-name { font-size: 13px; color: #94a3b8; margin-bottom: 6px; }
+.driver-high  { font-size: 12px; font-weight: 600; color: #ef4444; background: rgba(239, 68, 68, 0.15); padding: 4px 10px; border-radius: 20px; display: inline-block; }
+.driver-med   { font-size: 12px; font-weight: 600; color: #f59e0b; background: rgba(245, 158, 11, 0.15); padding: 4px 10px; border-radius: 20px; display: inline-block; }
+.driver-low   { font-size: 12px; font-weight: 600; color: #10b981; background: rgba(16, 185, 129, 0.15); padding: 4px 10px; border-radius: 20px; display: inline-block; }
 
-/* ---- Page header ---- */
-.page-header {
-    margin-bottom: 1.8rem;
+.stNumberInput, .stSelectbox, .stSlider{
+    border-radius:14px;
 }
-.page-title {
-    font-size: 28px;
-    font-weight: 700;
-    color: #085041;
-    margin-bottom: 4px;
+            
+label, p, span, h5 {
+    color: #f1f5f9 !important;
 }
-.page-sub {
-    font-size: 15px;
-    color: #6b7c74;
+
+.hero-title{
+    font-size:52px;
+    font-weight:900;
+    color:white;
+    line-height:1.1;
+    letter-spacing:-1px;
+    text-align:center;
 }
+
+.hero-highlight{
+    background: linear-gradient(135deg, #10B981, #14B8A6, #06B6D4);
+    -webkit-background-clip:text;
+    -webkit-text-fill-color:transparent;
+}
+
+.hero-subtitle{
+    margin-top:14px;
+    font-size:18px;
+    color:#cbd5e1;
+    max-width:750px;
+    margin-left:auto;
+    margin-right:auto;
+    line-height:1.6;
+    text-align:center;
+}
+            
+            /* ---- İndirme Butonlarının Yazı Rengini Düzeltme ---- */
+div[data-testid="stDownloadButton"] button p,
+div[data-testid="stDownloadButton"] button span,
+div[data-testid="stDownloadButton"] button p span {
+    color: #1e293b !important; /* Yazı rengini görünür koyu füme yapar */
+}
+
+/* İndirme butonunun üzerine fareyle gelindiğinde yazı rengi beyaz olsun (Hover Etkisi) */
+div[data-testid="stDownloadButton"] button:hover p,
+div[data-testid="stDownloadButton"] button:hover span {
+    color: #ffffff !important;
+}
+            
 </style>
 """, unsafe_allow_html=True)
 
@@ -209,26 +266,31 @@ except FileNotFoundError:
     st.error("⚠️ Model or Scaler files could not be found!")
     model_loaded = False
 
-# ── 5. Top Bar & Language Selection (Hizalı ve Tekil Yapıldı) ─────────────────
+# ── 5. Top Bar & Language Selection ──────────────────────────────────────────────
 top_col1, top_col2 = st.columns([4, 1])
 
 with top_col2:
     lang = st.selectbox("🌐 Language", options=["English", "Türkçe"], label_visibility="collapsed")
 
+# languages.py dosyasındaki zengin veri setini aktif hale getiriyoruz
 t = texts[lang]
 
 with top_col1:
     st.markdown("""
-    <span style='background: #f1f5f9; color: #475569; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500;'>
+    <span style='background: rgba(255,255,255,0.1); color: #f1f5f9; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 500; border: 1px solid rgba(255,255,255,0.05);'>
       ⚡ Gradient Boosting Model (R²: 0.89)
     </span>
     """, unsafe_allow_html=True)
 
-# ── 6. Page Header ───────────────────────────────────────────────────────────────
+# ── 6. Page Header (Hatalı Python Kod Syntax Alanı Düzeltildi) ────────────────────
 st.markdown(f"""
-<div class="page-header">
-  <div class="page-title">{t["page_title"]}</div>
-  <div class="page-sub">{t["page_sub"]}</div>
+<div style="text-align:center; margin-top:30px; margin-bottom: 40px;">
+    <div class="hero-title">
+        <span>🩺 {t['page_title'].split(' ')[0]}</span> <span class="hero-highlight">{" ".join(t['page_title'].split(' ')[1:])}</span>
+    </div>
+    <div class="hero-subtitle">
+        {t['page_sub']}
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -248,8 +310,6 @@ with col2:
     
     bmi_label = "Calculated BMI" if lang == "English" else "Hesaplanan BMI"
     st.info(f"🔢 {bmi_label}: **{bmi:.1f}**")
-    
-    region = st.selectbox(t["region"], options=["Northeast", "Northwest", "Southeast", "Southwest"])
 st.markdown('</div>', unsafe_allow_html=True)
 
 # ── 8. Form – Lifestyle ──────────────────────────────────────────────────────────
@@ -259,9 +319,10 @@ with col3:
     children = st.slider(t["children"], min_value=0, max_value=5, value=0)
 with col4:
     smoker = st.selectbox(t["smoke"], options=["No", "Yes"])
+    region = st.selectbox(t["region"], options=["Northeast", "Northwest", "Southeast", "Southwest"])
 st.markdown('</div>', unsafe_allow_html=True)
 
-# ── 9. Prediction Function ─────────────────────────────────────────────────────
+# ── 9. Core Utility Functions (Prediction & English-Only PDF) ────────────────────
 def predict_insurance(age, sex, bmi, children, smoker, region):
     numerical_inputs = np.array([[age, bmi]])
     scaled_numerical = scaler.transform(numerical_inputs)
@@ -277,110 +338,68 @@ def predict_insurance(age, sex, bmi, children, smoker, region):
     final_features = np.array([[age_scaled, sex_val, bmi_scaled, children, smoker_val, r_nw, r_se, r_sw]])
     return model.predict(final_features)[0]
 
-def generate_pdf_report(age, sex, bmi, children, smoker, region, result, lang):
-    """Generates a clean, professional, English-only PDF report for the insurance quote."""
+def generate_pdf_report(age, sex, bmi, children, smoker, region, result):
+    """Generates a clean, professional, English-only PDF report."""
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=40, leftMargin=40, topMargin=40, bottomMargin=40)
     story = []
-    
     styles = getSampleStyleSheet()
     
-    # Premium Corporate Colors & Typography Styles
     primary_color = colors.HexColor("#085041")
     secondary_color = colors.HexColor("#1D9E75")
     
-    title_style = ParagraphStyle(
-        'DocTitle',
-        parent=styles['Heading1'],
-        fontSize=24,
-        textColor=primary_color,
-        spaceAfter=6
-    )
-    
-    sub_style = ParagraphStyle(
-        'DocSub',
-        parent=styles['Normal'],
-        fontSize=10,
-        textColor=colors.HexColor("#475569"),
-        spaceAfter=20
-    )
-    
-    section_heading = ParagraphStyle(
-        'SecHeading',
-        parent=styles['Heading2'],
-        fontSize=14,
-        textColor=primary_color,
-        spaceBefore=12,
-        spaceAfter=8
-    )
+    title_style = ParagraphStyle('DocTitle', parent=styles['Heading1'], fontSize=24, textColor=primary_color, spaceAfter=6)
+    sub_style = ParagraphStyle('DocSub', parent=styles['Normal'], fontSize=10, textColor=colors.HexColor("#475569"), spaceAfter=20)
+    section_heading = ParagraphStyle('SecHeading', parent=styles['Heading2'], fontSize=14, textColor=primary_color, spaceBefore=12, spaceAfter=8)
 
-    # Clean English Headers
-    title_text = "HEALTH INSURANCE QUOTE REPORT"
-    sub_text = "Generated by AI-Powered InsurTech Estimation System"
-    
-    story.append(Paragraph(title_text, title_style))
-    story.append(Paragraph(sub_text, sub_style))
+    story.append(Paragraph("HEALTH INSURANCE QUOTE REPORT", title_style))
+    story.append(Paragraph("Generated by AI-Powered InsurTech Estimation System", sub_style))
     story.append(Spacer(1, 10))
     
-    # Section 1: Customer Info Table (English Only)
     story.append(Paragraph("1. Customer Demographics & Lifestyle", section_heading))
-    
     data_labels = [
         ["Age", str(age), "Gender", str(sex)],
         ["BMI", f"{bmi:.1f}", "Children", str(children)],
         ["Smoker Status", str(smoker), "Region", str(region)]
     ]
-    
     t1 = Table(data_labels, colWidths=[130, 130, 130, 130])
     t1.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (0,-1), colors.HexColor("#f1f5f9")),
         ('BACKGROUND', (2,0), (2,-1), colors.HexColor("#f1f5f9")),
         ('TEXTCOLOR', (0,0), (-1,-1), colors.HexColor("#1e293b")),
-        ('ALIGN', (0,0), (-1,-1), 'LEFT'),
-        ('FONTNAME', (0,0), (-1,-1), 'Helvetica'),
-        ('FONTSIZE', (0,0), (-1,-1), 10),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 8),
-        ('TOPPADDING', (0,0), (-1,-1), 8),
         ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor("#cbd5e1")),
+        ('PADDING', (0,0), (-1,-1), 8),
     ]))
     story.append(t1)
     story.append(Spacer(1, 20))
     
-    # Section 2: Financial Estimation Table (English Only)
     story.append(Paragraph("2. AI Financial Risk & Premium Estimation", section_heading))
-    
     financial_data = [
         ["Calculation Metric", "Value ($)"],
         ["Estimated Annual Premium", f"${result:,.2f}"],
         ["Estimated Monthly Premium", f"${(result/12):,.2f}"]
     ]
-    
     t2 = Table(financial_data, colWidths=[300, 220])
     t2.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (1,0), primary_color),
         ('TEXTCOLOR', (0,0), (1,0), colors.white),
-        ('FONTNAME', (0,0), (1,0), 'Helvetica-Bold'),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 10),
-        ('TOPPADDING', (0,0), (-1,-1), 10),
         ('BACKGROUND', (0,1), (-1,-1), colors.HexColor("#f0faf6")),
         ('GRID', (0,0), (-1,-1), 0.5, secondary_color),
-        ('FONTSIZE', (0,1), (-1,-1), 11),
+        ('PADDING', (0,0), (-1,-1), 10),
     ]))
     story.append(t2)
     story.append(Spacer(1, 25))
     
-    # English Only Disclaimer Footer
     footer_text = ("* Legal Notice: This document provides an artificial intelligence estimation based on historical health data grids (R2: 0.89). "
-                   "It serves as a technical preview and does not constitute a final binding underwriting contract.")
-                   
+                   "It serves as a technical preview and does not constitute a final binding contract.")
     story.append(Paragraph(footer_text, ParagraphStyle('Footer', parent=styles['Normal'], fontSize=8, textColor=colors.HexColor("#64748b"))))
     
     doc.build(story)
     buffer.seek(0)
     return buffer
 
-# ── 10. Predict Button & Core Pipeline ─────────────────────────────────────────
-if st.button("Predict my cost →"):
+# ── 10. Predict Button & Core Execution Pipeline ─────────────────────────────────
+if st.button(t["predict_btn"]):
     if age < 18 or bmi < 10.0:
         st.error("⚠️ Age must be 18+ and BMI must be greater than 10.")
     elif not model_loaded:
@@ -390,7 +409,7 @@ if st.button("Predict my cost →"):
             result  = predict_insurance(age, sex, bmi, children, smoker, region)
             monthly = result / 12
 
-            # 💾 MS SQL Server'a Kalıcı Kayıt Düzenlemesi (SQLite Temizlendi)
+            # 💾 Kalıcı Kayıt: MS SQL Server Entegrasyonu
             try:
                 conn = get_ms_sql_connection()
                 cursor = conn.cursor()
@@ -403,35 +422,21 @@ if st.button("Predict my cost →"):
             except Exception as e:
                 st.warning(f"Database write error: {e}")
 
-            # ── Result Card ───────────────────────────────────────────────────
-            DATASET_MIN = 1_121
-            DATASET_MAX = 63_770
-            progress_val = float(np.clip((result - DATASET_MIN) / (DATASET_MAX - DATASET_MIN), 0, 1))
-
+            # ── Result Card ──
             st.markdown(f"""
             <div class="result-card">
-              <div class="result-label">Estimated Annual Cost</div>
-              <div class="result-amount">${result:,.2f}</div>
-              <div class="result-monthly">≈ ${monthly:,.2f} / month</div>
-              <div class="divider"></div>
-              <span class="model-pill">📈 Gradient Boosting · R² 0.89</span>
+                <div class="result-label">Estimated Annual Cost</div>
+                <div class="result-amount">${result:,.2f}</div>
+                <div class="result-monthly">≈ ${monthly:,.2f} / month</div>
             </div>
             """, unsafe_allow_html=True)
 
+            # ── 📥 PDF Rapor İndirme Düzenlemesi ──
+            pdf_data = generate_pdf_report(age, sex, bmi, children, smoker, region, result)
+            pdf_btn_lbl = "📥 Download Official Insurance PDF Report (English Only)" if lang == "English" else "📥 Resmi Sigorta PDF Raporunu İndir (Yalnızca İngilizce)"
+            st.download_button(label=pdf_btn_lbl, data=pdf_data, file_name=f"Insurance_Quote_{age}_{sex}.pdf", mime="application/pdf")
 
-            # ── 📥 PDF Rapor İndirme Mekanizması ──────────────────────────────
-            pdf_data = generate_pdf_report(age, sex, bmi, children, smoker, region, result, lang)
-            pdf_btn_lbl = "📥 Download Official Insurance PDF Report" if lang == "English" else "📥 Resmi Sigorta PDF Raporunu İndir"
-            
-            st.download_button(
-                label=pdf_btn_lbl,
-                data=pdf_data,
-                file_name=f"Insurance_Quote_{age}_{sex}.pdf",
-                mime="application/pdf"
-            )
-
-
-            # ── 🔮 "What-If" Finansal Simülatör (Değişken Hataları Giderildi) ─────
+            # ── 🔮 "What-If" Finansal Simülasyon Operasyonu ──
             if smoker == "Yes" or bmi > 24.9:
                 st.markdown("---")
                 sim_title = "🔮 What-If Financial Optimization" if lang == "English" else "🔮 'Ya Değilse' Finansal Optimizasyon Simülasyonu"
@@ -439,22 +444,22 @@ if st.button("Predict my cost →"):
                 
                 sim_smoker = "No"
                 sim_bmi = 22.0 if bmi > 24.9 else bmi
-                
                 sim_result = predict_insurance(age, sex, sim_bmi, children, sim_smoker, region)
                 yearly_savings = result - sim_result
                 
                 if yearly_savings > 100:
                     sav_msg_en = f"💡 **Financial Optimization:** If you quit smoking and achieve an ideal BMI (22.0), your estimated annual premium drops to **${sim_result:,.2f}**. You would save **${yearly_savings:,.2f}** per year!"
-                    sav_msg_tr = f"💡 **Finansal Optimizasyon:** Sigarayı bırakıp ideal kilonunuza (BMI 22.0) ulaştığınız takdirde, tahmini yıllık priminiz **${sim_result:,.2f}** seviyesine düşer. Yılda tam **${yearly_savings:,.2f}** tasarruf edebilirsiniz!"
+                    sav_msg_tr = f"💡 **Finansal Optimizasyon:** Sigarayı bırakıp ideal kilonuza (BMI 22.0) ulaştığınız takdirde, tahmini yıllık priminiz **${sim_result:,.2f}** seviyesine düşer. Yılda tam **${yearly_savings:,.2f}** tasarruf edebilirsiniz!"
                     st.success(sav_msg_en if lang == "English" else sav_msg_tr)
 
-            # ── Progress bar ──────────────────────────────────────────────────
+            # ── Progress Bar ──
+            DATASET_MIN, DATASET_MAX = 1_121, 63_770
+            progress_val = float(np.clip((result - DATASET_MIN) / (DATASET_MAX - DATASET_MIN), 0, 1))
             st.markdown("**Where does your estimate sit in the dataset?**")
             st.progress(progress_val, text=f"${DATASET_MIN:,} (min) ──── your estimate: ${result:,.0f} ──── ${DATASET_MAX:,} (max)")
 
-            # ── Key Cost Drivers ──────────────────────────────────────────────
+            # ── Key Cost Drivers Paneli ──
             st.markdown(f'<div class="section-card"><div class="section-title">{t["drivers_title"]}</div>', unsafe_allow_html=True)
-            
             smk_lbl = "Smoking" if lang == "English" else "Sigara"
             age_lbl = "Age" if lang == "English" else "Yaş"
             imp_high = "High impact" if lang == "English" else "Yüksek etki"
@@ -479,26 +484,13 @@ if st.button("Predict my cost →"):
                 <div class="driver-low">{imp_low}</div>
               </div>
             </div>
-            </div>
             """, unsafe_allow_html=True)
 
-            # ── Personalized Tips ─────────────────────────────────────────────
-            tips = []
-            if smoker == "Yes":
-                tips.append("🚬 Smoking is the single largest cost driver — it can multiply your premium by 3–4×.")
-            
+            # ── Kişiselleştirilmiş İpuçları ──
             if bmi > 30.0:
                 st.markdown(f"##### {t['tips_title']}")
-                tip_msg = t["bmi_tip"].format(bmi_val=bmi)
-                st.info(tip_msg)
-                
-            if age > 50:
-                tips.append("🎂 Premiums increase significantly after age 50 — consider locking in a plan early.")
-            if tips:
-                st.markdown("---")
-                st.markdown("**Personalized tips for you:**")
-                for tip in tips:
-                    st.info(tip)
+                st.info(t["bmi_tip"].format(bmi_val=bmi))
+            st.markdown('</div>', unsafe_allow_html=True)
 
 # ── 11. MS SQL Veri Çekme Motoru & Tablo/Grafik Paneli ──────────────────────────
 try:
@@ -517,8 +509,7 @@ except Exception:
 
 if not history_df.empty:
     st.markdown("---")
-    
-    hist_title = "📋 Prediction History" if lang == "English" else "📋 Tahmin Geçmişi"
+    hist_title = "📊 Estimation History" if lang == "English" else "📊 Tahmin Geçmişi"
     hist_sub = "Below are the calculations made during this session:" if lang == "English" else "Bu oturumda yapılan hesaplamalar:"
     download_btn_lbl = "📥 Download History as CSV" if lang == "English" else "📥 Geçmişi CSV Olarak İndir"
     clear_btn_lbl = "🗑️ Clear History" if lang == "English" else "🗑️ Geçmişi Temizle"
@@ -526,21 +517,18 @@ if not history_df.empty:
     st.markdown(f"### {hist_title}")
     st.caption(hist_sub)
 
-    # Canlı Metrik Kartları (Korumalı Hesaplama)
+    # Canlı Analitik Metrik Kartları
     total_queries = len(history_df)
     avg_cost = history_df["Estimated Cost ($)"].mean() if total_queries > 0 else 0.0
     max_cost = history_df["Estimated Cost ($)"].max() if total_queries > 0 else 0.0
 
     m_col1, m_col2, m_col3 = st.columns(3)
     with m_col1:
-        lbl_q = "Total Predictions" if lang == "English" else "Toplam Sorgulama"
-        st.metric(lbl_q, f"{total_queries}")
+        st.metric("Total Predictions" if lang == "English" else "Toplam Sorgulama", f"{total_queries}")
     with m_col2:
-        lbl_a = "Average Estimate" if lang == "English" else "Ortalama Tahmin"
-        st.metric(lbl_a, f"${avg_cost:,.2f}")
+        st.metric("Average Estimate" if lang == "English" else "Ortalama Tahmin", f"${avg_cost:,.2f}")
     with m_col3:
-        lbl_m = "Highest Estimate" if lang == "English" else "En Yüksek Tahmin"
-        st.metric(lbl_m, f"${max_cost:,.2f}")
+        st.metric("Highest Estimate" if lang == "English" else "En Yüksek Tahmin", f"${max_cost:,.2f}")
 
     st.markdown("<br>", unsafe_allow_html=True)
     st.dataframe(history_df, use_container_width=True)
