@@ -12,7 +12,7 @@ import io
 from languages import texts
 
 # ── 1. Veritabanı Altyapısı (MS SQL Server) ───────────────────────────────────────
-SERVER_NAME = "localhost"  # Kendi SQL Server ismine göre değiştirebilirsin
+SERVER_NAME = "localhost"  
 DB_NAME = "InsuranceDB"
 
 def get_ms_sql_connection():
@@ -59,7 +59,7 @@ def init_ms_sql():
     except Exception as e:
         st.error(f"MS SQL Connection Error: {e}. Lütfen SERVER_NAME alanını kontrol edin.")
 
-# MS SQL Altyapısını tetikle
+
 init_ms_sql()
 
 # ── 2. Page Config ────────────────────────────────────────────────────────────────
@@ -254,6 +254,22 @@ div[data-testid="stDownloadButton"] button:hover span {
     color: #ffffff !important;
 }
             
+      
+div[data-testid="stDataFrameToolbar"] button svg,
+[class*="StyledDataFrameToolbar"] button svg,
+.stDataFrameToolbar button svg,
+div[class*="StyledDataFrameToolbar"] svg {
+    fill: #000000 !important; /* İkon rengini tamamen siyah yapar */
+    color: #000000 !important; /* Bazı tarayıcılar için alternatif renk zorlaması */
+}
+
+/* Fareyle ikonun üzerine gelindiğinde zümrüt yeşili parlasın (Şık dursun) */
+div[data-testid="stDataFrameToolbar"] button:hover svg,
+[class*="StyledDataFrameToolbar"] button:hover svg {
+    fill: #0F766E !important;
+    color: #0F766E !important;
+}
+            
 </style>
 """, unsafe_allow_html=True)
 
@@ -272,7 +288,7 @@ top_col1, top_col2 = st.columns([4, 1])
 with top_col2:
     lang = st.selectbox("🌐 Language", options=["English", "Türkçe"], label_visibility="collapsed")
 
-# languages.py dosyasındaki zengin veri setini aktif hale getiriyoruz
+
 t = texts[lang]
 
 with top_col1:
@@ -282,7 +298,7 @@ with top_col1:
     </span>
     """, unsafe_allow_html=True)
 
-# ── 6. Page Header (Hatalı Python Kod Syntax Alanı Düzeltildi) ────────────────────
+# ── 6. Page Header  ────────────────────
 st.markdown(f"""
 <div style="text-align:center; margin-top:30px; margin-bottom: 40px;">
     <div class="hero-title">
@@ -294,8 +310,9 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# ── 7. Form – Personal Info ──────────────────────────────────────────────────────
-st.markdown(f'<div class="section-card"><div class="section-title">{t["personal_info"]}</div>', unsafe_allow_html=True)
+
+# ── Form – Personal Info ──────────────────────────────────────────────────────
+st.markdown('<div class="section-card"><div class="section-title">👤 Personal Information</div>', unsafe_allow_html=True)
 col1, col2 = st.columns(2)
 with col1:
     age = st.number_input(t["age"], min_value=18, max_value=100, value=25, step=1)
@@ -409,7 +426,7 @@ if st.button(t["predict_btn"]):
             result  = predict_insurance(age, sex, bmi, children, smoker, region)
             monthly = result / 12
 
-            # 💾 Kalıcı Kayıt: MS SQL Server Entegrasyonu
+            
             try:
                 conn = get_ms_sql_connection()
                 cursor = conn.cursor()
@@ -431,27 +448,38 @@ if st.button(t["predict_btn"]):
             </div>
             """, unsafe_allow_html=True)
 
-            # ── 📥 PDF Rapor İndirme Düzenlemesi ──
+            
             pdf_data = generate_pdf_report(age, sex, bmi, children, smoker, region, result)
             pdf_btn_lbl = "📥 Download Official Insurance PDF Report (English Only)" if lang == "English" else "📥 Resmi Sigorta PDF Raporunu İndir (Yalnızca İngilizce)"
             st.download_button(label=pdf_btn_lbl, data=pdf_data, file_name=f"Insurance_Quote_{age}_{sex}.pdf", mime="application/pdf")
 
-            # ── 🔮 "What-If" Finansal Simülasyon Operasyonu ──
-            if smoker == "Yes" or bmi > 24.9:
-                st.markdown("---")
-                sim_title = "🔮 What-If Financial Optimization" if lang == "English" else "🔮 'Ya Değilse' Finansal Optimizasyon Simülasyonu"
-                st.markdown(f"##### {sim_title}")
+            
+            st.markdown("---")
+            sim_title = "🔮 What-If Financial Optimization" if lang == "English" else "🔮 'Ya Değilse' Finansal Optimizasyon Simülasyonu"
+            st.markdown(f"##### {sim_title}")
+            
+            
+            current_smoker = smoker if 'smoker' in locals() else "No"
+            current_bmi = bmi if 'bmi' in locals() else 22.0
+            
+            
+            sim_smoker = "No"
+            sim_bmi = 22.0 if current_bmi > 24.9 else current_bmi
+            
+            
+            sim_result = predict_insurance(age, sex, sim_bmi, children, sim_smoker, region)
+            yearly_savings = result - sim_result
+            
+            if yearly_savings > 10: 
+                sav_msg_en = f"💡 **Financial Optimization:** If you live tobacco-free and maintain a healthy weight (BMI 22.0), your estimated premium drops to **${sim_result:,.2f}**. You would save **${yearly_savings:,.2f}** per year!"
+                sav_msg_tr = f"💡 **Finansal Optimizasyon:** Sigarasız bir yaşam sürüp ideal kilonuza (BMI 22.0) ulaştığınız takdirde, tahmini priminiz **${sim_result:,.2f}** seviyesine düşer. Yılda tam **${yearly_savings:,.2f}** tasarruf edebilirsiniz!"
+                st.success(sav_msg_en if lang == "English" else sav_msg_tr)
+            else:
                 
-                sim_smoker = "No"
-                sim_bmi = 22.0 if bmi > 24.9 else bmi
-                sim_result = predict_insurance(age, sex, sim_bmi, children, sim_smoker, region)
-                yearly_savings = result - sim_result
-                
-                if yearly_savings > 100:
-                    sav_msg_en = f"💡 **Financial Optimization:** If you quit smoking and achieve an ideal BMI (22.0), your estimated annual premium drops to **${sim_result:,.2f}**. You would save **${yearly_savings:,.2f}** per year!"
-                    sav_msg_tr = f"💡 **Finansal Optimizasyon:** Sigarayı bırakıp ideal kilonuza (BMI 22.0) ulaştığınız takdirde, tahmini yıllık priminiz **${sim_result:,.2f}** seviyesine düşer. Yılda tam **${yearly_savings:,.2f}** tasarruf edebilirsiniz!"
-                    st.success(sav_msg_en if lang == "English" else sav_msg_tr)
-
+                perfect_en = "✨ **Perfect Profile:** You already have the most optimal financial and health metrics!"
+                perfect_tr = "✨ **Mükemmel Profil:** Zaten en optimum finansal ve sağlık değerlerine sahipsiniz!"
+                st.info(perfect_en if lang == "English" else perfect_tr)
+                    
             # ── Progress Bar ──
             DATASET_MIN, DATASET_MAX = 1_121, 63_770
             progress_val = float(np.clip((result - DATASET_MIN) / (DATASET_MAX - DATASET_MIN), 0, 1))
