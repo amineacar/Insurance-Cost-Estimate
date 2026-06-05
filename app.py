@@ -4,13 +4,10 @@ import pickle
 import numpy as np
 
 
-# Eğer get_ms_sql_connection fonksiyonu başka bir dosyadaysa (örn: database.py) oradan import etmelisin:
-# from database import get_ms_sql_connection
 
-# Eğer projenin içinde tanımlıysa, buraya örnek bir fonksiyon bırakıyorum (kendi bağlantı bilgine göre güncelleyebilirsin):
 def get_ms_sql_connection():
     import pyodbc
-    # Örnek bağlantı stringi
+  
     conn_str = 'DRIVER={ODBC Driver 17 for SQL Server};SERVER=your_server;DATABASE=your_db;UID=your_user;PWD=your_password'
     return pyodbc.connect(conn_str)
 
@@ -168,6 +165,16 @@ div.stButton > button:hover{
     line-height:1.6;
     text-align:center;
 }
+            
+            [data-baseweb="input"] input {
+    color: #6B7280 !important;
+    font-weight: 600;
+}
+
+[data-baseweb="select"] span {
+    color: #6B7280 !important;
+    font-weight: 600;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -225,8 +232,13 @@ t = texts[lang]
 
 with top_col1:
     st.markdown("""
-    <span style='background: #f1f5f9; color: #475569; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500;'>
-      ⚡ Gradient Boosting Model (R²: 0.89)
+    <span style='background:#374151;
+    color:#FFFFFF;
+    padding:6px 12px;
+    border-radius:20px;
+    font-size:12px;
+    font-weight:700;'>
+    ⚡ Gradient Boosting Model (R²: 0.89)
     </span>
     """, unsafe_allow_html=True)
 
@@ -241,6 +253,7 @@ st.markdown("""
     </div>
 </div>
 """, unsafe_allow_html=True)
+
 
 # ── Form – Personal Info ──────────────────────────────────────────────────────
 st.markdown('<div class="section-card"><div class="section-title">👤 Personal Information</div>', unsafe_allow_html=True)
