@@ -1,4 +1,4 @@
-# 🩺 Predictive InsurTech Cost Estimation Platform
+# 🩺 Predictive Insurance Cost Estimation Platform
 
 An enterprise-grade health insurance premium prediction and risk analytics platform. The system leverages an advanced **Gradient Boosting Machine Learning pipeline** ($R^2: 0.89$) for real-time inference, backed by a persistent relational **Microsoft SQL Server** infrastructure, and delivered through a premium, responsive dark-themed analytical interface.
 
