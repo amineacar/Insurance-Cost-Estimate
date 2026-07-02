@@ -1,7 +1,7 @@
 texts = {
     "English": {
         "sidebar_title": "### 📊 Model Info",
-        "page_title": "🏥 Insurance Cost Estimator",
+        "page_title": "Health Insurance Cost Estimator",
         "page_sub": "Fill in the details below to get a personalized annual cost estimate.",
         "personal_info": "👤 Personal Information",
         "age": "Age",

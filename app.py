@@ -1,8 +1,12 @@
+from analytics import render_analytics_panel
+from models import predict_insurance, generate_pdf_report, model
+from auth_ui import render_auth_interface
+from database import init_ms_sql, get_ms_sql_connection, register_user, login_user
+from database import log_prediction
 import streamlit as st
 import pandas as pd
 import pickle
 import numpy as np
-import pyodbc
 import os
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
@@ -11,59 +15,28 @@ from reportlab.lib import colors
 import io
 from languages import texts
 
-# ── 1. Veritabanı Altyapısı (MS SQL Server) ───────────────────────────────────────
-SERVER_NAME = "localhost"  
-DB_NAME = "InsuranceDB"
 
-def get_ms_sql_connection():
-    """MS SQL Server'a Windows Authentication ile bağlanır."""
-    conn_str = (
-        f"DRIVER={{ODBC Driver 17 for SQL Server}};"
-        f"SERVER={SERVER_NAME};"
-        f"DATABASE={DB_NAME};"
-        f"Trusted_Connection=yes;"
-    )
-    return pyodbc.connect(conn_str)
+response_time = 0.0 
 
-def init_ms_sql():
-    """Master veritabanına bağlanıp önce InsuranceDB'yi, sonra tabloları otomatik oluşturur."""
-    try:
-        master_str = f"DRIVER={{ODBC Driver 17 for SQL Server}};SERVER={SERVER_NAME};DATABASE=master;Trusted_Connection=yes;"
-        conn = pyodbc.connect(master_str, autocommit=True)
-        cursor = conn.cursor()
-        cursor.execute(f"IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = '{DB_NAME}') CREATE DATABASE {DB_NAME}")
-        conn.close()
-        
-        conn = get_ms_sql_connection()
-        cursor = conn.cursor()
-        cursor.execute("""
-            IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[predictions]') AND type in (N'U'))
-            BEGIN
-                CREATE TABLE [dbo].[predictions] (
-                    [id] INT IDENTITY(1,1) PRIMARY KEY,
-                    [age] INT,
-                    [height] INT,
-                    [weight] INT,
-                    [bmi] FLOAT,
-                    [gender] VARCHAR(10),
-                    [children] INT,
-                    [smoker] VARCHAR(5),
-                    [region] VARCHAR(20),
-                    [estimated_cost] FLOAT,
-                    [timestamp] DATETIME DEFAULT GETDATE()
-                )
-            END
-        """)
-        conn.commit()
-        conn.close()
-    except Exception as e:
-        st.error(f"MS SQL Connection Error: {e}. Lütfen SERVER_NAME alanını kontrol edin.")
+# Session State Başlatma
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+if "username" not in st.session_state:
+    st.session_state.username = None
+if "role" not in st.session_state:
+    st.session_state.role = None
 
-
-init_ms_sql()
+# ── GİRİŞ / KAYIT EKRANI ARAYÜZÜ MODÜLÜ ───────────────────────────────
+if not st.session_state.logged_in:
+    render_auth_interface()
+    st.stop()  # 🎯 BU SATIRI KESİNLİKLE EKLE! Giriş yapana kadar alt kodları durdurur.
+   
+       
 
 # ── 2. Page Config ────────────────────────────────────────────────────────────────
-st.set_page_config(
+if st.session_state.logged_in:
+
+   st.set_page_config(
     page_title="Health Insurance Cost Estimator",
     page_icon="🩺",
     layout="wide"
@@ -273,14 +246,7 @@ div[data-testid="stDataFrameToolbar"] button:hover svg,
 </style>
 """, unsafe_allow_html=True)
 
-# ── 4. Load Model ────────────────────────────────────────────────────────────────
-try:
-    model = pickle.load(open('model.pkl', 'rb'))
-    scaler = pickle.load(open('scaler.pkl', 'rb'))
-    model_loaded = True
-except FileNotFoundError:
-    st.error("⚠️ Model or Scaler files could not be found!")
-    model_loaded = False
+
 
 # ── 5. Top Bar & Language Selection ──────────────────────────────────────────────
 top_col1, top_col2 = st.columns([4, 1])
@@ -339,114 +305,43 @@ with col4:
     region = st.selectbox(t["region"], options=["Northeast", "Northwest", "Southeast", "Southwest"])
 st.markdown('</div>', unsafe_allow_html=True)
 
-# ── 9. Core Utility Functions (Prediction & English-Only PDF) ────────────────────
-def predict_insurance(age, sex, bmi, children, smoker, region):
-    numerical_inputs = np.array([[age, bmi]])
-    scaled_numerical = scaler.transform(numerical_inputs)
-    age_scaled = scaled_numerical[0][0]
-    bmi_scaled = scaled_numerical[0][1]
 
-    sex_val    = 1 if sex == "Female" else 0
-    smoker_val = 1 if smoker == "Yes" else 0
-    r_nw = 1 if region == "Northwest"  else 0
-    r_se = 1 if region == "Southeast"  else 0
-    r_sw = 1 if region == "Southwest"  else 0
-
-    final_features = np.array([[age_scaled, sex_val, bmi_scaled, children, smoker_val, r_nw, r_se, r_sw]])
-    return model.predict(final_features)[0]
-
-def generate_pdf_report(age, sex, bmi, children, smoker, region, result):
-    """Generates a clean, professional, English-only PDF report."""
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=40, leftMargin=40, topMargin=40, bottomMargin=40)
-    story = []
-    styles = getSampleStyleSheet()
-    
-    primary_color = colors.HexColor("#085041")
-    secondary_color = colors.HexColor("#1D9E75")
-    
-    title_style = ParagraphStyle('DocTitle', parent=styles['Heading1'], fontSize=24, textColor=primary_color, spaceAfter=6)
-    sub_style = ParagraphStyle('DocSub', parent=styles['Normal'], fontSize=10, textColor=colors.HexColor("#475569"), spaceAfter=20)
-    section_heading = ParagraphStyle('SecHeading', parent=styles['Heading2'], fontSize=14, textColor=primary_color, spaceBefore=12, spaceAfter=8)
-
-    story.append(Paragraph("HEALTH INSURANCE QUOTE REPORT", title_style))
-    story.append(Paragraph("Generated by AI-Powered InsurTech Estimation System", sub_style))
-    story.append(Spacer(1, 10))
-    
-    story.append(Paragraph("1. Customer Demographics & Lifestyle", section_heading))
-    data_labels = [
-        ["Age", str(age), "Gender", str(sex)],
-        ["BMI", f"{bmi:.1f}", "Children", str(children)],
-        ["Smoker Status", str(smoker), "Region", str(region)]
-    ]
-    t1 = Table(data_labels, colWidths=[130, 130, 130, 130])
-    t1.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (0,-1), colors.HexColor("#f1f5f9")),
-        ('BACKGROUND', (2,0), (2,-1), colors.HexColor("#f1f5f9")),
-        ('TEXTCOLOR', (0,0), (-1,-1), colors.HexColor("#1e293b")),
-        ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor("#cbd5e1")),
-        ('PADDING', (0,0), (-1,-1), 8),
-    ]))
-    story.append(t1)
-    story.append(Spacer(1, 20))
-    
-    story.append(Paragraph("2. AI Financial Risk & Premium Estimation", section_heading))
-    financial_data = [
-        ["Calculation Metric", "Value ($)"],
-        ["Estimated Annual Premium", f"${result:,.2f}"],
-        ["Estimated Monthly Premium", f"${(result/12):,.2f}"]
-    ]
-    t2 = Table(financial_data, colWidths=[300, 220])
-    t2.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (1,0), primary_color),
-        ('TEXTCOLOR', (0,0), (1,0), colors.white),
-        ('BACKGROUND', (0,1), (-1,-1), colors.HexColor("#f0faf6")),
-        ('GRID', (0,0), (-1,-1), 0.5, secondary_color),
-        ('PADDING', (0,0), (-1,-1), 10),
-    ]))
-    story.append(t2)
-    story.append(Spacer(1, 25))
-    
-    footer_text = ("* Legal Notice: This document provides an artificial intelligence estimation based on historical health data grids (R2: 0.89). "
-                   "It serves as a technical preview and does not constitute a final binding contract.")
-    story.append(Paragraph(footer_text, ParagraphStyle('Footer', parent=styles['Normal'], fontSize=8, textColor=colors.HexColor("#64748b"))))
-    
-    doc.build(story)
-    buffer.seek(0)
-    return buffer
 
 # ── 10. Predict Button & Core Execution Pipeline ─────────────────────────────────
 if st.button(t["predict_btn"]):
     if age < 18 or bmi < 10.0:
         st.error("⚠️ Age must be 18+ and BMI must be greater than 10.")
-    elif not model_loaded:
+    elif model is None:
         st.error("Model files are missing — cannot predict.")
     else:
-        with st.spinner("Calculating..."):
-            result  = predict_insurance(age, sex, bmi, children, smoker, region)
-            monthly = result / 12
+            with st.spinner("Calculating..."):
 
-            
-            try:
-                conn = get_ms_sql_connection()
-                cursor = conn.cursor()
-                cursor.execute("""
-                    INSERT INTO predictions (age, height, weight, bmi, gender, children, smoker, region, estimated_cost)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, (age, height, weight, round(bmi, 2), sex, children, smoker, region, round(result, 2)))
-                conn.commit()
-                conn.close()
-            except Exception as e:
-                st.warning(f"Database write error: {e}")
+                import time
+                start_time = time.time()
 
-            # ── Result Card ──
-            st.markdown(f"""
-            <div class="result-card">
-                <div class="result-label">Estimated Annual Cost</div>
-                <div class="result-amount">${result:,.2f}</div>
-                <div class="result-monthly">≈ ${monthly:,.2f} / month</div>
-            </div>
-            """, unsafe_allow_html=True)
+                result  = predict_insurance(age, sex, bmi, children, smoker, region)
+                monthly = result / 12
+
+            # SQL bağlantı ve insert kısımlarının yerine gelen temiz çağrı:
+            db_status = log_prediction(age, height, weight, bmi, sex, children, smoker, region, result, st.session_state.username)
+            if not db_status:
+                st.warning("⚠️ Prediction could not be logged to the database.")
+
+                
+                end_time = time.time()
+                response_time = end_time - start_time
+
+                print(f"⏱️ Performance Test - Total Response Time: {response_time:.4f} seconds")
+
+                # ── Result Card ──
+                st.markdown(f"""
+                <div class="result-card">
+                    <div class="result-label">Estimated Annual Cost</div>
+                    <div class="result-amount">${result:,.2f}</div>
+                    <div class="result-monthly">≈ ${monthly:,.2f} / month</div>
+                    
+                </div>
+                """, unsafe_allow_html=True)
 
             
             pdf_data = generate_pdf_report(age, sex, bmi, children, smoker, region, result)
@@ -457,28 +352,43 @@ if st.button(t["predict_btn"]):
             st.markdown("---")
             sim_title = "🔮 What-If Financial Optimization" if lang == "English" else "🔮 'Ya Değilse' Finansal Optimizasyon Simülasyonu"
             st.markdown(f"##### {sim_title}")
-            
-            
-            current_smoker = smoker if 'smoker' in locals() else "No"
-            current_bmi = bmi if 'bmi' in locals() else 22.0
-            
-            
+
+# 1. (orijinal bmi ve smoker girdilerini doğrudan kullanıyoruz)
+            is_smoker = (smoker == "Yes")
+            is_high_bmi = (bmi > 24.9)
+
+# 2. Simülasyon değerleri (İdeal sağlıklı senaryo hedefi)
             sim_smoker = "No"
-            sim_bmi = 22.0 if current_bmi > 24.9 else current_bmi
-            
-            
+            sim_bmi = 22.0 if is_high_bmi else bmi
+
+# 3. Model tahmini ve tasarruf hesabı 
             sim_result = predict_insurance(age, sex, sim_bmi, children, sim_smoker, region)
             yearly_savings = result - sim_result
-            
-            if yearly_savings > 10: 
-                sav_msg_en = f"💡 **Financial Optimization:** If you live tobacco-free and maintain a healthy weight (BMI 22.0), your estimated premium drops to **${sim_result:,.2f}**. You would save **${yearly_savings:,.2f}** per year!"
-                sav_msg_tr = f"💡 **Finansal Optimizasyon:** Sigarasız bir yaşam sürüp ideal kilonuza (BMI 22.0) ulaştığınız takdirde, tahmini priminiz **${sim_result:,.2f}** seviyesine düşer. Yılda tam **${yearly_savings:,.2f}** tasarruf edebilirsiniz!"
+
+# 4. Senaryolar
+            if yearly_savings > 10:
+    #  Hem Sigara var Hem Yüksek BMI
+                if is_smoker and is_high_bmi:
+                    sav_msg_en = f"💡 **Financial Optimization:** If you live tobacco-free and reach a healthy target weight (BMI 22.0), your annual premium drops significantly. *You would save* **${yearly_savings:,.2f}** per year!"
+                    sav_msg_tr = f"💡 **Finansal Optimizasyon:** Sigarasız bir yaşam sürüp ideal kilonuza (BMI 22.0) ulaştığınız takdirde, yıllık sigorta priminiz ciddi oranda düşer. *Yıllık tasarrufunuz:* **{yearly_savings:,.2f} TL** olur!"
+    
+    # Sadece Sigara var (Kilosu zaten ideal)
+                elif is_smoker:
+                    sav_msg_en = f"💡 **Financial Optimization:** If you live tobacco-free, your estimated premium drops to a healthier bracket. *You would save* **${yearly_savings:,.2f}** per year!"
+                    sav_msg_tr = f"💡 **Finansal Optimizasyon:** Sigarasız bir yaşama geçiş yaptığınız takdirde, tahmini sigorta priminiz düşecektir. *Yıllık tasarrufunuz:* **{yearly_savings:,.2f} TL** olur!"
+    
+    # Sadece Yüksek BMI var (Sigara içmiyor)
+                else:
+                    sav_msg_en = f"💡 **Financial Optimization:** If you reach a healthy target weight (BMI 22.0) by reducing metabolic risks, your estimated premium drops. *You would save* **${yearly_savings:,.2f}** per year!"
+                    sav_msg_tr = f"💡 **Finansal Optimizasyon:** Metabolik riskleri azaltarak ideal kilonuza (BMI 22.0) ulaştığınız takdirde, tahmini priminiz düşecektir. *Yıllık tasarrufunuz:* **{yearly_savings:,.2f} TL** olur!"
+
                 st.success(sav_msg_en if lang == "English" else sav_msg_tr)
+
             else:
-                
+    #  PERFECT PROFILE 
                 perfect_en = "✨ **Perfect Profile:** You already have the most optimal financial and health metrics!"
                 perfect_tr = "✨ **Mükemmel Profil:** Zaten en optimum finansal ve sağlık değerlerine sahipsiniz!"
-                st.info(perfect_en if lang == "English" else perfect_tr)
+                st.info(perfect_en if lang == "English" else perfect_tr)                         
                     
             # ── Progress Bar ──
             DATASET_MIN, DATASET_MAX = 1_121, 63_770
@@ -521,59 +431,31 @@ if st.button(t["predict_btn"]):
             st.markdown('</div>', unsafe_allow_html=True)
 
 # ── 11. MS SQL Veri Çekme Motoru & Tablo/Grafik Paneli ──────────────────────────
-try:
-    conn = get_ms_sql_connection()
-    query = """
-        SELECT age AS Age, height AS [Height (cm)], weight AS [Weight (kg)], 
-               bmi AS BMI, gender AS Gender, children AS Children, 
-               smoker AS Smoker, region AS Region, estimated_cost AS [Estimated Cost ($)] 
-        FROM predictions 
-        ORDER BY id DESC
-    """
-    history_df = pd.read_sql_query(query, conn)
-    conn.close()
-except Exception:
-    history_df = pd.DataFrame()
-
-if not history_df.empty:
-    st.markdown("---")
-    hist_title = "📊 Estimation History" if lang == "English" else "📊 Tahmin Geçmişi"
-    hist_sub = "Below are the calculations made during this session:" if lang == "English" else "Bu oturumda yapılan hesaplamalar:"
-    download_btn_lbl = "📥 Download History as CSV" if lang == "English" else "📥 Geçmişi CSV Olarak İndir"
-    clear_btn_lbl = "🗑️ Clear History" if lang == "English" else "🗑️ Geçmişi Temizle"
-    
-    st.markdown(f"### {hist_title}")
-    st.caption(hist_sub)
-
-    # Canlı Analitik Metrik Kartları
-    total_queries = len(history_df)
-    avg_cost = history_df["Estimated Cost ($)"].mean() if total_queries > 0 else 0.0
-    max_cost = history_df["Estimated Cost ($)"].max() if total_queries > 0 else 0.0
-
-    m_col1, m_col2, m_col3 = st.columns(3)
-    with m_col1:
-        st.metric("Total Predictions" if lang == "English" else "Toplam Sorgulama", f"{total_queries}")
-    with m_col2:
-        st.metric("Average Estimate" if lang == "English" else "Ortalama Tahmin", f"${avg_cost:,.2f}")
-    with m_col3:
-        st.metric("Highest Estimate" if lang == "English" else "En Yüksek Tahmin", f"${max_cost:,.2f}")
-
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.dataframe(history_df, use_container_width=True)
-    
-    b_col1, b_col2 = st.columns([1, 1])
-    with b_col1:
-        csv_data = history_df.to_csv(index=False).encode('utf-8')
-        st.download_button(label=download_btn_lbl, data=csv_data, file_name="insurance_predictions_history.csv", mime="text/csv")
+render_analytics_panel(lang, t)
+  
         
-    with b_col2:
-        if st.button(clear_btn_lbl):
-            try:
-                conn = get_ms_sql_connection()
-                cursor = conn.cursor()
-                cursor.execute("TRUNCATE TABLE predictions")
-                conn.commit()
-                conn.close()
-            except Exception:
-                pass
-            st.rerun()
+  
+      # ── SAYFA SONU GÜVENLİ ÇIKIŞ  ──────────────────────────────────────
+st.markdown("<br>", unsafe_allow_html=True)
+
+# Dil seçeneğine göre buton metnini belirle
+logout_text = "🔓 Log Out" if lang == "English" else "🔓 Çıkış Yap"
+
+l_col1, l_col2, l_col3 = st.columns([1, 1, 1])
+with l_col2:
+    if st.button(logout_text, use_container_width=True, type="secondary"):
+        st.session_state.logged_in = False
+        st.session_state.username = None
+        st.session_state.role = None
+        st.rerun()
+
+
+st.markdown("<br><br><br>", unsafe_allow_html=True) 
+st.markdown("---") 
+
+footer_text = (
+    "© 2026 Health Insurance Cost Estimator | Privacy Policy | Terms of Service | Contact"
+    if lang == "English" else
+    "© 2026 Sağlık Sigortası Maliyet Tahmincisi | Gizlilik Politikası | Kullanım Şartları | İletişim"
+)
+st.markdown(f"<p style='text-align: center; color: gray; font-size: 0.8rem;'>{footer_text}</p>", unsafe_allow_html=True)
